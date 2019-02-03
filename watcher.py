@@ -1,7 +1,8 @@
+# coding=utf-8
 import time
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-import sys
+import yaml
 
 from sendMail import SendMail
 
@@ -15,6 +16,20 @@ except ImportError:
 
 class MyHandler(PatternMatchingEventHandler):
     patterns = ["*.pdf", "*.jpg"]
+    recipient = ''
+    cc = ''
+
+    def __init__(self, recipient, cc=None, subject='', message=''):
+        super(MyHandler, self).__init__()
+        self.subject = subject
+        self.message = message
+        if cc is None:
+            cc = []
+        self.recipient = recipient
+        self.cc = cc
+
+    def set_recipient(self, recipient):
+        self.recipient = recipient
 
     def on_modified(self, event):
         self.process(event)
@@ -33,20 +48,46 @@ class MyHandler(PatternMatchingEventHandler):
         """
         # the file will be processed there
         print event.src_path, event.event_type  # print now only for degug
-        mail = SendMail('remo@liebi.net')
-        mail.add_attachment(event.src_path).send_mail()
+        mail = SendMail(self.recipient, self.subject, self.message)
+        mail.add_attachment(event.src_path)
+        mail.set_cc(self.cc)
+        mail.send_mail()
 
 
 if __name__ == '__main__':
-    args = sys.argv[1:]
-    observer = Observer()
-    observer.schedule(MyHandler(), path=args[0] if args else '.')
-    observer.start()
+    N2watch = Observer()
+    threads = []
+    with open("paths.yaml", 'r') as paths:
+        try:
+            paths = (yaml.load(paths))
+            for i in paths:
+                path = paths[i]
+                targetPath = str(path['path'])
+                print targetPath
+                N2watch.schedule(MyHandler(path['to'], path['cc'], path['subject'], path['message']), targetPath,
+                                 recursive=True)
+                threads.append(N2watch)
+        except yaml.YAMLError as exc:
+            print(exc)
+
+    N2watch.start()
 
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        observer.stop()
+        N2watch.stop()
+    N2watch.join()
 
-    observer.join()
+    # args = sys.argv[1:]
+    # observer = Observer()
+    # observer.schedule(MyHandler(), path=args[0] if args else '.')
+    # observer.start()
+    #
+    # try:
+    #     while True:
+    #         time.sleep(1)
+    # except KeyboardInterrupt:
+    #     observer.stop()
+    #
+    # observer.join()

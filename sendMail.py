@@ -13,24 +13,31 @@ class SendMail:
     password = ''
     file = None
     msg = None
+    cc = []
+    recipients = []
 
     def __init__(self, to_address, subject='New Message', body='Message Body'):
-        # Create .env file path.
         dotenv_path = join(dirname(__file__), '.env')
-
-        # Load file from the path.
         load_dotenv(dotenv_path)
+        msg = MIMEMultipart()
 
+        self.recipients = []
+        self.cc = []
         self.password = os.getenv('GOOGLE_PASSWORD')
         self.from_address = os.getenv('GOOGLE_FROM')
-        msg = MIMEMultipart()
         self.to_address = to_address
+        self.recipients.append(to_address)
         msg['From'] = self.from_address
         msg['Subject'] = subject
         msg['To'] = self.to_address
         # attach the body with the msg instance
         msg.attach(MIMEText(body, 'plain'))
         self.msg = msg
+
+    def set_cc(self, cc):
+        self.cc = cc
+        self.msg['Cc'] = ', '.join(cc)
+        self.recipients += cc
 
     def set_recipient(self, to_address):
         self.msg['To'] = to_address
@@ -57,7 +64,7 @@ class SendMail:
         s.starttls()
         s.login(self.from_address, self.password)
         text = self.msg.as_string()
-        s.sendmail(self.from_address, self.to_address, text)
+        s.sendmail(self.from_address, self.recipients, text)
         s.quit()
 
 

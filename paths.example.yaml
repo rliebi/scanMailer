@@ -1,0 +1,5 @@
+route1:
+  path: "/path/to/directory"
+  to: "my-email@example"
+  subject: "News Scan"
+  message: "Hey! Your Scan arrived!"
