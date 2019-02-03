@@ -1,10 +1,13 @@
+#!/usr/bin/env python
 # coding=utf-8
+
 import time
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-import yaml
-
+from ruamel.yaml import YAML
 from sendMail import SendMail
+import io
+yaml = YAML()
 
 try:
     # Python 3
@@ -47,7 +50,6 @@ class MyHandler(PatternMatchingEventHandler):
             path/to/observed/file
         """
         # the file will be processed there
-        print event.src_path, event.event_type  # print now only for degug
         mail = SendMail(self.recipient, self.subject, self.message)
         mail.add_attachment(event.src_path)
         mail.set_cc(self.cc)
@@ -57,17 +59,16 @@ class MyHandler(PatternMatchingEventHandler):
 if __name__ == '__main__':
     N2watch = Observer()
     threads = []
-    with open("paths.yaml", 'r') as paths:
+    with io.open("paths.yaml", 'r', encoding='utf8') as paths:
         try:
             paths = (yaml.load(paths))
             for i in paths:
                 path = paths[i]
                 targetPath = str(path['path'])
-                print targetPath
                 N2watch.schedule(MyHandler(path['to'], path['cc'], path['subject'], path['message']), targetPath,
                                  recursive=True)
                 threads.append(N2watch)
-        except yaml.YAMLError as exc:
+        except OSError as exc:
             print(exc)
 
     N2watch.start()

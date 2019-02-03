@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding=utf-8
+
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -30,8 +33,7 @@ class SendMail:
         msg['From'] = self.from_address
         msg['Subject'] = subject
         msg['To'] = self.to_address
-        # attach the body with the msg instance
-        msg.attach(MIMEText(body, 'plain'))
+        msg.attach(MIMEText(body, 'plain', "utf-8"))
         self.msg = msg
 
     def set_cc(self, cc):
