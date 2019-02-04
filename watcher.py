@@ -8,6 +8,10 @@ from watchdog.events import PatternMatchingEventHandler
 from ruamel.yaml import YAML
 from sendMail import SendMail
 import io
+import os
+import sys
+import psutil
+import logging
 yaml = YAML()
 
 try:
@@ -18,7 +22,7 @@ except ImportError:
     import urllib2 as urllib
 
 
-class MyHandler(PatternMatchingEventHandler):
+class ScanHanlder(PatternMatchingEventHandler):
     patterns = ["*.pdf", "*.jpg"]
     recipient = ''
     cc = ''
@@ -26,7 +30,7 @@ class MyHandler(PatternMatchingEventHandler):
     timer = None
 
     def __init__(self, recipient, cc=None, subject='', message=''):
-        super(MyHandler, self).__init__()
+        super(ScanHanlder, self).__init__()
         self.subject = subject
         self.message = message
         if cc is None:
@@ -67,26 +71,48 @@ class MyHandler(PatternMatchingEventHandler):
         mail.send_mail()
 
 
+class PathHandler(PatternMatchingEventHandler):
+    patterns = ["*.yaml", "*.yml", "*.py"]
+    # def __init__(self):
+    #     super(PathHandler, self).__init__()
+
+    def on_modified(self, event):
+        print 'paths.yaml modified.. reloading'
+        try:
+            p = psutil.Process(os.getpid())
+            for handler in p.connections():
+                os.close(handler.fd)
+        except Exception, e:
+            logging.error(e)
+            print e
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+
+
 if __name__ == '__main__':
     N2watch = Observer()
     threads = []
+    N2watch.schedule(PathHandler(), '.', recursive=True)
+    threads.append(N2watch)
     with io.open("paths.yaml", 'r', encoding='utf8') as paths:
         try:
             paths = (yaml.load(paths))
-            for i in paths:
-                path = paths[i]
-                targetPath = str(path['path'])
-                N2watch.schedule(MyHandler(path['to'], path['cc'], path['subject'], path['message']), targetPath,
-                                 recursive=True)
-                threads.append(N2watch)
+            if paths:
+                for i in paths:
+                    path = paths[i]
+                    targetPath = str(path['path'])
+                    N2watch.schedule(ScanHanlder(path['to'], path['cc'], path['subject'], path['message']), targetPath,
+                                     recursive=True)
+                    threads.append(N2watch)
+
         except OSError as exc:
             print(exc)
-
     N2watch.start()
 
     try:
         while True:
             time.sleep(1)
+            print threads
     except KeyboardInterrupt:
         N2watch.stop()
     N2watch.join()
