@@ -92,8 +92,8 @@ class PathHandler(PatternMatchingEventHandler):
 if __name__ == '__main__':
     N2watch = Observer()
     threads = []
-    N2watch.schedule(PathHandler(), '.', recursive=True)
-    threads.append(N2watch)
+    # N2watch.schedule(PathHandler(), '.', recursive=True)
+    # threads.append(N2watch)
     with io.open("paths.yaml", 'r', encoding='utf8') as paths:
         try:
             paths = (yaml.load(paths))
@@ -112,7 +112,7 @@ if __name__ == '__main__':
     try:
         while True:
             time.sleep(1)
-            print threads
+            # print threads
     except KeyboardInterrupt:
         N2watch.stop()
     N2watch.join()
