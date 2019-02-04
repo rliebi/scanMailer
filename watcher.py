@@ -2,6 +2,7 @@
 # coding=utf-8
 
 import time
+from threading import Timer
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 from ruamel.yaml import YAML
@@ -21,6 +22,8 @@ class MyHandler(PatternMatchingEventHandler):
     patterns = ["*.pdf", "*.jpg"]
     recipient = ''
     cc = ''
+    timeout = 10000
+    timer = None
 
     def __init__(self, recipient, cc=None, subject='', message=''):
         super(MyHandler, self).__init__()
@@ -41,6 +44,15 @@ class MyHandler(PatternMatchingEventHandler):
         self.process(event)
 
     def process(self, event):
+        # the file will be processed there
+        print 'starting event'
+        if self.timer and self.timer.is_alive():
+            self.timer.cancel()
+        self.timer = Timer(30.0, self.send_mail, [event])
+        self.timer.start()
+
+    def send_mail(self, event):
+        print 'executing event'
         """
         event.event_type
             'modified' | 'created' | 'moved' | 'deleted'
@@ -49,7 +61,6 @@ class MyHandler(PatternMatchingEventHandler):
         event.src_path
             path/to/observed/file
         """
-        # the file will be processed there
         mail = SendMail(self.recipient, self.subject, self.message)
         mail.add_attachment(event.src_path)
         mail.set_cc(self.cc)
